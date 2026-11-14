@@ -11,6 +11,7 @@ public class AhoCorasick {
     private static final class Node {
         final Map<Character, Node> children = new HashMap<>();
         Node fail;
+        Node output;
         int patternIndex = -1;
         final int depth;
 
@@ -26,7 +27,7 @@ public class AhoCorasick {
     public AhoCorasick(List<String> patterns) {
         this.patterns = new ArrayList<>(patterns);
         buildTrie();
-        buildFailureLinks();
+        buildFailureAndOutputLinks();
     }
 
     private void buildTrie() {
@@ -53,12 +54,14 @@ public class AhoCorasick {
         }
     }
 
-    private void buildFailureLinks() {
+    private void buildFailureAndOutputLinks() {
         Queue<Node> queue = new ArrayDeque<>();
         root.fail = root;
+        root.output = null;
 
         for (Node child : root.children.values()) {
             child.fail = root;
+            child.output = null;
             queue.add(child);
         }
 
@@ -75,9 +78,33 @@ public class AhoCorasick {
                 Node target = f.children.get(c);
                 v.fail = (target != null && target != v) ? target : root;
 
+                v.output = (v.fail.patternIndex != -1) ? v.fail : v.fail.output;
+
                 queue.add(v);
             }
         }
+    }
+
+    public List<Match> search(String text) {
+        List<Match> result = new ArrayList<>();
+        Node cur = root;
+        for (int i = 0; i < text.length(); i++) {
+            cur = step(cur, text.charAt(i));
+
+            for (Node t = (cur.patternIndex != -1) ? cur : cur.output; t != null; t = t.output) {
+                int start = i - t.depth + 1;
+                result.add(new Match(start, t.patternIndex, patterns.get(t.patternIndex)));
+            }
+        }
+        return result;
+    }
+
+    private Node step(Node cur, char c) {
+        while (cur != root && !cur.children.containsKey(c)) {
+            cur = cur.fail;
+        }
+        Node next = cur.children.get(c);
+        return next != null ? next : root;
     }
 
     public int getNodeCount() {
