@@ -99,6 +99,18 @@ public class AhoCorasick {
         return result;
     }
 
+    public long countMatches(String text) {
+        long count = 0;
+        Node cur = root;
+        for (int i = 0; i < text.length(); i++) {
+            cur = step(cur, text.charAt(i));
+            for (Node t = (cur.patternIndex != -1) ? cur : cur.output; t != null; t = t.output) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     private Node step(Node cur, char c) {
         while (cur != root && !cur.children.containsKey(c)) {
             cur = cur.fail;
